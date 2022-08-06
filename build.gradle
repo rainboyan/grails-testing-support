@@ -1,5 +1,6 @@
 buildscript {
     repositories {
+        mavenLocal()
         maven { url "https://repo.grails.org/grails/core" }
         maven { url "https://plugins.gradle.org/m2/" }
     }
@@ -12,6 +13,7 @@ buildscript {
 }
 
 repositories {
+    mavenLocal()
     maven { url "https://repo.grails.org/grails/core" }
 }
 
@@ -77,6 +79,7 @@ subprojects { project ->
     dependencies {
         implementation "com.github.javaparser:javaparser-core:$javaParserVersion"
         compileOnly "javax.servlet:javax.servlet-api:$servletApiVersion"
+        compileOnly "io.micronaut.spring:micronaut-spring-context:$micronautVersion"
 
         testImplementation "javax.servlet:javax.servlet-api:$servletApiVersion"
         testImplementation "org.codehaus.groovy:groovy-test-junit5:$groovyVersion"
