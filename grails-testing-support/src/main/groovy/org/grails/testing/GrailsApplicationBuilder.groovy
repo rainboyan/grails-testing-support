@@ -100,69 +100,70 @@ class GrailsApplicationBuilder {
         ConfigurableApplicationContext context
 
         if (isServletApiPresent && servletContext != null) {
-            context = (ConfigurableApplicationContext) ClassUtils.forName("org.springframework.web.context.support.GenericWebApplicationContext").newInstance(servletContext);
+            context = (ConfigurableApplicationContext) ClassUtils.forName("org.springframework.web.context.support.GenericWebApplicationContext").newInstance(servletContext)
         } else {
             context = (ConfigurableApplicationContext) ClassUtils.forName("org.springframework.context.support.GenericApplicationContext").newInstance()
         }
+        ConfigurableBeanFactory beanFactory = context.getBeanFactory()
+        ((DefaultListableBeanFactory) beanFactory).setAllowBeanDefinitionOverriding(true)
+        ((DefaultListableBeanFactory) beanFactory).setAllowCircularReferences(true)
 
-        ClassLoader applicationClassLoader = this.class.classLoader
-        ConfigurableEnvironment configuredEnvironment = context.getEnvironment()
-        ApplicationContextConfiguration micronautConfiguration = new ApplicationContextConfiguration() {
-            @Override
-            List<String> getEnvironments() {
-                if (configuredEnvironment != null) {
-                    return configuredEnvironment.getActiveProfiles().toList()
-                } else {
-                    return Collections.emptyList()
+        prepareContext(context)
+        if (isMicronautEnvironment()) {
+            ClassLoader applicationClassLoader = this.class.classLoader
+            ConfigurableEnvironment configuredEnvironment = context.getEnvironment()
+            ApplicationContextConfiguration micronautConfiguration = new ApplicationContextConfiguration() {
+                @Override
+                List<String> getEnvironments() {
+                    if (configuredEnvironment != null) {
+                        return configuredEnvironment.getActiveProfiles().toList()
+                    } else {
+                        return Collections.emptyList()
+                    }
+                }
+
+                @Override
+                Optional<Boolean> getDeduceEnvironments() {
+                    return Optional.of(false)
+                }
+
+                @Override
+                ClassLoader getClassLoader() {
+                    return applicationClassLoader
                 }
             }
 
-            @Override
-            Optional<Boolean> getDeduceEnvironments() {
-                return Optional.of(false)
+            List beanExcludes = []
+            beanExcludes.add(ConversionService.class)
+            beanExcludes.add(Environment.class)
+            beanExcludes.add(PropertyResolver.class)
+            beanExcludes.add(ConfigurableEnvironment.class)
+            def objectMapper = io.micronaut.core.reflect.ClassUtils.forName("com.fasterxml.jackson.databind.ObjectMapper", context.getClassLoader()).orElse(null)
+            if (objectMapper != null) {
+                beanExcludes.add(objectMapper)
             }
+            def micronautContext = new DefaultApplicationContext(micronautConfiguration);
+            micronautContext
+                    .environment
+                    .addPropertySource("grails-config", [(MicronautBeanFactoryConfiguration.PREFIX + ".bean-excludes"): (Object) beanExcludes])
+            micronautContext.start()
+            ConfigurableApplicationContext parentContext = micronautContext.getBean(ConfigurableApplicationContext)
 
-            @Override
-            ClassLoader getClassLoader() {
-                return applicationClassLoader
-            }
+            context.setParent(
+                    parentContext
+            )
+            context.addApplicationListener(new GrailsApp.MicronautShutdownListener(micronautContext))
         }
-
-        ConfigurableBeanFactory beanFactory = context.getBeanFactory()
-        List beanExcludes = []
-        beanExcludes.add(ConversionService.class)
-        beanExcludes.add(Environment.class)
-        beanExcludes.add(PropertyResolver.class)
-        beanExcludes.add(ConfigurableEnvironment.class)
-        def objectMapper = io.micronaut.core.reflect.ClassUtils.forName("com.fasterxml.jackson.databind.ObjectMapper", context.getClassLoader()).orElse(null)
-        if (objectMapper != null) {
-            beanExcludes.add(objectMapper)
-        }
-        def micronautContext = new DefaultApplicationContext(micronautConfiguration);
-        micronautContext
-                .environment
-                .addPropertySource("grails-config", [(MicronautBeanFactoryConfiguration.PREFIX + ".bean-excludes"): (Object) beanExcludes])
-        micronautContext.start()
-        ConfigurableApplicationContext parentContext = micronautContext.getBean(ConfigurableApplicationContext)
-        ((DefaultListableBeanFactory) beanFactory)
-                .setAllowBeanDefinitionOverriding(true);
-        ((DefaultListableBeanFactory) beanFactory)
-                .setAllowCircularReferences(true);
-        context.setParent(
-                parentContext
-        )
-        context.addApplicationListener(new GrailsApp.MicronautShutdownListener(micronautContext))
-        prepareContext(context, beanFactory)
         context.refresh()
         context.registerShutdownHook()
 
         context
     }
 
-    protected void prepareContext(ConfigurableApplicationContext applicationContext, ConfigurableBeanFactory beanFactory) {
-        registerGrailsAppPostProcessorBean(beanFactory)
+    protected void prepareContext(ConfigurableApplicationContext applicationContext) {
+        registerGrailsAppPostProcessorBean(applicationContext.getBeanFactory())
 
-        AnnotationConfigUtils.registerAnnotationConfigProcessors((BeanDefinitionRegistry) beanFactory)
+        AnnotationConfigUtils.registerAnnotationConfigProcessors((BeanDefinitionRegistry) applicationContext.getBeanFactory())
         new ConfigDataApplicationContextInitializer().initialize(applicationContext)
     }
 
@@ -267,5 +268,9 @@ class GrailsApplicationBuilder {
             propertySourcePlaceholderConfigurer.order = Ordered.HIGHEST_PRECEDENCE
             propertySourcePlaceholderConfigurer.setLocalOverride(localOverride)
         }
+    }
+
+    private boolean isMicronautEnvironment() {
+        ClassUtils.isPresent("io.micronaut.spring.context.env.MicronautEnvironment", this.class.classLoader)
     }
 }
