@@ -1,7 +1,10 @@
 dependencies {
     api "org.grails.plugins:gsp:$gspVersion"
+    api "org.grails:grails-plugin-codecs:$grailsVersion"
+    api "org.grails:grails-plugin-databinding:$grailsVersion"
     api "org.grails:grails-plugin-rest:$grailsVersion"
     api "org.grails:grails-plugin-interceptors:$grailsVersion"
+    api "org.grails:grails-plugin-i18n:$grailsVersion"
     api "javax.servlet:javax.servlet-api:$servletApiVersion"
 
     api project(':grails-testing-support')

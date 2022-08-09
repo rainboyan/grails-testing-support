@@ -16,6 +16,7 @@ dependencies {
         exclude module: 'grails-plugin-converters'
         exclude module: 'grails-web'
     }
+    api "org.grails:grails-plugin-databinding:$grailsVersion"
     api("org.grails.plugins:async:$asyncVersion") {
         exclude module: 'grails-plugin-controllers'
         exclude module: 'grails-core'
