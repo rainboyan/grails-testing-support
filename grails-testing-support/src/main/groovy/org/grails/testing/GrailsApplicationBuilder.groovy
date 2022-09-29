@@ -1,6 +1,7 @@
 package org.grails.testing
 
 import grails.boot.config.GrailsApplicationPostProcessor
+import grails.boot.config.GrailsAutoConfiguration
 import grails.core.GrailsApplication
 import grails.core.GrailsApplicationLifeCycle
 import grails.core.support.proxy.DefaultProxyHandler
@@ -43,7 +44,7 @@ class GrailsApplicationBuilder {
     public static final boolean isServletApiPresent = ClassUtils.isPresent("javax.servlet.ServletContext", GrailsApplicationBuilder.classLoader)
 
     static final Set DEFAULT_INCLUDED_PLUGINS = ['core', 'eventBus'] as Set
-    static final Class[] DEFAULT_AUTO_CONFIGURATIONS = [CoreConfiguration, CodecsPluginConfiguration, DataBindingConfiguration, MimeTypesConfiguration]
+    static final Class[] DEFAULT_AUTO_CONFIGURATIONS = [GrailsAutoConfiguration, CoreConfiguration, CodecsPluginConfiguration, DataBindingConfiguration, MimeTypesConfiguration]
 
     Closure doWithSpring
     Closure doWithConfig
@@ -198,20 +199,21 @@ class GrailsApplicationBuilder {
         beanFactory.registerBeanDefinition("grailsApplicationPostProcessor", beandef)
     }
 
-    static class TestRuntimeGrailsApplicationPostProcessor extends GrailsApplicationPostProcessor {
+    static class TestRuntimeGrailsApplicationPostProcessor extends GrailsApplicationPostProcessor implements GroovyObject {
         Closure customizeGrailsApplicationClosure
         Set includedPlugins
         boolean localOverride = false
 
         TestRuntimeGrailsApplicationPostProcessor(Closure doWithSpringClosure, Set includedPlugins) {
-            super([doWithSpring: { -> doWithSpringClosure }] as GrailsApplicationLifeCycle, null, null)
+            super()
+            setGrailsApplicationLifeCycle([doWithSpring: { -> doWithSpringClosure }] as GrailsApplicationLifeCycle)
             loadExternalBeans = false
             reloadingEnabled = false
             this.includedPlugins = includedPlugins
         }
 
         @Override
-        protected void customizePluginManager(GrailsPluginManager grailsApplication) {
+        protected void customizePluginManager(GrailsPluginManager pluginManager) {
             pluginManager.pluginFilter = new IncludingPluginFilter(includedPlugins)
         }
 
