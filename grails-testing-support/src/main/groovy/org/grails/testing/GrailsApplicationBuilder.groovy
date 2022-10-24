@@ -15,7 +15,7 @@ import org.grails.plugins.core.CoreConfiguration
 import org.grails.plugins.databinding.DataBindingConfiguration
 import org.grails.plugins.web.mime.MimeTypesConfiguration
 import org.grails.spring.context.support.GrailsPlaceholderConfigurer
-import org.grails.spring.context.support.MapBasedSmartPropertyOverrideConfigurer
+import org.grails.spring.context.support.GrailsBeanPropertyOverrideConfigurer
 import org.grails.transaction.TransactionManagerPostProcessor
 import org.springframework.beans.BeansException
 import org.springframework.beans.MutablePropertyValues
@@ -159,9 +159,7 @@ class GrailsApplicationBuilder {
             messageSource(StaticMessageSource)
             transactionManagerAwarePostProcessor(TransactionManagerPostProcessor)
             grailsPlaceholderConfigurer(GrailsPlaceholderConfigurer, '${', grailsApplication.config.toProperties())
-            mapBasedSmartPropertyOverrideConfigurer(MapBasedSmartPropertyOverrideConfigurer) {
-                grailsApplication = grailsApplication
-            }
+            mapBasedSmartPropertyOverrideConfigurer(GrailsBeanPropertyOverrideConfigurer, grailsApplication)
         }
     }
 
